@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sari-Sari Store POS System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            body * { visibility: hidden; }
+            #printable-receipt, #printable-receipt * { visibility: visible; }
+            #printable-receipt { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Top Header / Navigation -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white text-indigo-700 p-2 rounded-lg font-bold text-xl shadow">
+                    <i class="fa-solid fa-store"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Mina POS System</h1>
+                    <p class="text-xs text-indigo-200">Point of Sale & Inventory</p>
+                </div>
+            </div>
+
+            <!-- Cloud Status & Navigation Tabs -->
+            <div class="flex items-center space-x-2 flex-wrap">
+                <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-amber-500 text-white flex items-center gap-1.5 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                    <span id="status-text">Checking Cloud...</span>
+                </div>
+
+                <nav class="flex bg-indigo-800 rounded-lg p-1 text-sm font-medium">
+                    <button onclick="switchTab('pos')" id="tab-pos" class="tab-btn px-3 py-1.5 rounded-md transition-colors bg-white text-indigo-800 font-semibold shadow-sm">
+                        <i class="fa-solid fa-cash-register mr-1"></i> Cashier
+                    </button>
+                    <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn px-3 py-1.5 rounded-md transition-colors hover:bg-indigo-700 text-white">
+                        <i class="fa-solid fa-boxes-stacked mr-1"></i> Inventory
+                    </button>
+                    <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn px-3 py-1.5 rounded-md transition-colors hover:bg-indigo-700 text-white">
+                        <i class="fa-solid fa-chart-line mr-1"></i> Sales
+                    </button>
+                </nav>
+
+                <button onclick="toggleSettingsModal()" class="p-2 text-indigo-200 hover:text-white hover:bg-indigo-600 rounded-lg transition" title="Settings & Cloud Config">
+                    <i class="fa-solid fa-gear text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4">
+
+        <!-- ================= TAB 1: POS CASHIER TERMINAL ================= -->
+        <div id="view-pos" class="tab-content grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left Panel: Products List (2 Cols on LG) -->
+            <div class="lg:col-span-2 flex flex-col space-y-4">
+                
+                <!-- Search & Filters -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3">
+                    <div class="relative flex-grow">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="pos-search" oninput="renderPOSProducts()" placeholder="Hanapin ang paninda..." class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0" id="pos-categories">
+                        <!-- Category Filters Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Products Grid -->
+                <div id="pos-product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <!-- Products dynamically rendered here -->
+                </div>
+            </div>
+
+            <!-- Right Panel: Cart & Checkout (1 Col on LG) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[calc(100vh-140px)] sticky top-20">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
+                    <h2 class="font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-cart-shopping text-indigo-600"></i> Cart / Receipt
+                    </h2>
+                    <button onclick="clearCart()" class="text-xs text-red-600 hover:text-red-700 font-medium hover:underline">
+                        Clear All
+                    </button>
+                </div>
+
+                <!-- Cart Item List -->
+                <div id="cart-items" class="flex-grow overflow-y-auto p-4 divide-y divide-slate-100 space-y-2">
+                    <!-- Cart items rendered here -->
+                </div>
+
+                <!-- Summary & Payment -->
+                <div class="p-4 border-t border-slate-200 bg-slate-50 rounded-b-xl space-y-3">
+                    <div class="space-y-1 text-sm">
+                        <div class="flex justify-between text-slate-500">
+                            <span>Subtotal:</span>
+                            <span id="cart-subtotal" class="font-medium">₱0.00</span>
+                        </div>
+                        <div class="flex justify-between text-slate-500 items-center">
+                            <span>Discount (₱):</span>
+                            <input type="number" id="cart-discount" min="0" value="0" oninput="updateCartTotals()" class="w-20 text-right py-0.5 px-2 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <div class="flex justify-between text-base font-bold text-slate-800 pt-1 border-t border-slate-200">
+                            <span>TOTAL:</span>
+                            <span id="cart-total" class="text-indigo-600">₱0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-2 border-t border-slate-200">
+                        <div class="flex items-center gap-2">
+                            <label for="payment-amount" class="text-xs font-semibold text-slate-600 whitespace-nowrap">Cash Payment:</label>
+                            <input type="number" id="payment-amount" min="0" placeholder="0.00" oninput="updateCartTotals()" class="w-full py-1.5 px-3 border border-slate-300 rounded-lg text-right font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div class="flex justify-between text-sm font-semibold">
+                            <span class="text-slate-600">Change:</span>
+                            <span id="cart-change" class="text-emerald-600">₱0.00</span>
+                        </div>
+                    </div>
+
+                    <button onclick="processCheckout()" id="btn-checkout" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3 px-4 rounded-lg transition shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-circle-check"></i> Complete Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: INVENTORY MANAGEMENT ================= -->
+        <div id="view-inventory" class="tab-content hidden space-y-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                <div>
+                    <h2 class="font-bold text-lg text-slate-800">Inventory & Products</h2>
+                    <p class="text-xs text-slate-500">Add, edit, and monitor product stock levels</p>
+                </div>
+                <button onclick="openProductModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Add Product
+                </button>
+            </div>
+
+            <!-- Inventory Search -->
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                <input type="text" id="inventory-search" oninput="renderInventoryTable()" placeholder="Search inventory..." class="w-full max-w-md px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+
+            <!-- Products Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
+                            <th class="p-3">Product Name</th>
+                            <th class="p-3">Category</th>
+                            <th class="p-3 text-right">Price</th>
+                            <th class="p-3 text-center">Stock Level</th>
+                            <th class="p-3 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- Inventory rows rendered here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: SALES REPORTS ================= -->
+        <div id="view-sales" class="tab-content hidden space-y-4">
+            <!-- Analytics Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500 font-medium uppercase">Total Revenue</p>
+                    <h3 id="stat-total-sales" class="text-2xl font-extrabold text-indigo-600 mt-1">₱0.00</h3>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500 font-medium uppercase">Total Transactions</p>
+                    <h3 id="stat-total-orders" class="text-2xl font-extrabold text-slate-800 mt-1">0</h3>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500 font-medium uppercase">Top Selling Item</p>
+                    <h3 id="stat-top-item" class="text-lg font-bold text-emerald-600 mt-1 truncate">-</h3>
+                </div>
+            </div>
+
+            <!-- Sales History Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center flex-wrap gap-2">
+                    <h3 class="font-bold text-slate-700">Sales History</h3>
+                    <button onclick="exportSalesCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i> Export to Excel (CSV)
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-xs font-semibold uppercase border-b border-slate-200">
+                                <th class="p-3">Receipt ID</th>
+                                <th class="p-3">Date & Time</th>
+                                <th class="p-3">Item Count</th>
+                                <th class="p-3 text-right">Total Amount</th>
+                                <th class="p-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Sales rows rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Add/Edit Product Modal -->
+    <div id="product-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
+            <div class="p-4 bg-indigo-600 text-white flex justify-between items-center">
+                <h3 id="modal-product-title" class="font-bold text-lg">Add Product</h3>
+                <button onclick="closeProductModal()" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="product-form" onsubmit="saveProduct(event)" class="p-4 space-y-3">
+                <input type="hidden" id="prod-id">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Product Name</label>
+                    <input type="text" id="prod-name" required placeholder="e.g. Instant Noodles" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Price (₱)</label>
+                        <input type="number" step="0.01" min="0" id="prod-price" required placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Stock Quantity</label>
+                        <input type="number" min="0" id="prod-stock" required placeholder="0" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Category</label>
+                    <input type="text" id="prod-category" placeholder="e.g. Canned Goods, Beverages, Snacks" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeProductModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 font-medium">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Receipt Print Modal -->
+    <div id="receipt-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-3 bg-slate-800 text-white flex justify-between items-center">
+                <h3 class="font-bold text-sm">Official Receipt</h3>
+                <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <!-- Receipt Printable Content -->
+            <div id="printable-receipt" class="p-6 overflow-y-auto text-xs font-mono space-y-3 bg-white text-slate-900">
+                <div class="text-center space-y-1 border-b border-dashed border-slate-300 pb-3">
+                    <h2 class="font-bold text-base">MINA POS STORE</h2>
+                    <p class="text-[10px] text-slate-500">Retail & Convenience Store</p>
+                    <p id="receipt-date" class="text-[10px] text-slate-500"></p>
+                    <p id="receipt-id" class="text-[10px] font-bold text-slate-700"></p>
+                </div>
+
+                <div id="receipt-items-list" class="space-y-1 py-1 border-b border-dashed border-slate-300">
+                    <!-- Dynamic receipt rows -->
+                </div>
+
+                <div class="space-y-1 text-right pt-1">
+                    <div class="flex justify-between"><span>Subtotal:</span><span id="receipt-subtotal"></span></div>
+                    <div class="flex justify-between"><span>Discount:</span><span id="receipt-discount"></span></div>
+                    <div class="flex justify-between font-bold text-sm pt-1 border-t border-slate-200"><span>TOTAL:</span><span id="receipt-total"></span></div>
+                    <div class="flex justify-between text-slate-600"><span>Cash:</span><span id="receipt-payment"></span></div>
+                    <div class="flex justify-between text-slate-600"><span>Change:</span><span id="receipt-change"></span></div>
+                </div>
+
+                <div class="text-center text-[10px] text-slate-500 pt-4 border-t border-dashed border-slate-300">
+                    <p>Thank you for your purchase!</p>
+                    <p>Please come again!</p>
+                </div>
+            </div>
+
+            <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeReceiptModal()" class="px-3 py-1.5 border border-slate-300 rounded text-xs font-medium">Close</button>
+                <button onclick="window.print()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-print"></i> Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings & Cloud Configuration Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div class="p-4 bg-slate-800 text-white flex justify-between items-center">
+                <h3 class="font-bold text-base"><i class="fa-solid fa-sliders mr-2"></i> Settings & Cloud Sync</h3>
+                <button onclick="toggleSettingsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 space-y-4 text-sm">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Database Mode</label>
+                    <div class="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs flex items-center gap-2">
+                        <i class="fa-solid fa-cloud text-emerald-600 text-lg"></i>
+                        <div>
+                            <p class="font-bold">Firebase Cloud Active (minapos)</p>
+                            <p class="text-[11px] opacity-90">Automatically syncs online with Google Cloud Firestore.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100">
+                    <h4 class="font-bold text-xs text-slate-700 mb-2">Data Backup & Restore</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="exportBackupData()" class="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-xs font-semibold text-slate-700 flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-download text-indigo-600 text-base"></i> Download Backup
+                        </button>
+                        <label class="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-xs font-semibold text-slate-700 flex flex-col items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-upload text-emerald-600 text-base"></i> Restore Backup
+                            <input type="file" accept=".json" onchange="importBackupData(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="toggleSettingsModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script type="module">
+        /* Import Firebase Modules */
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        /* Firebase Configuration & App ID Resolution */
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'minapos-store';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                apiKey: "AIzaSyBS1rsA5lAlQyGoESIzYxRq5lhLe30SsF8",
+                authDomain: "minapos.firebaseapp.com",
+                projectId: "minapos",
+                storageBucket: "minapos.firebasestorage.app",
+                messagingSenderId: "590015659002",
+                appId: "1:590015659002:web:e735bfcd9dc2901d0c8243",
+                measurementId: "G-4Q522RRS81"
+            };
+
+        /* Application State */
+        let db = null;
+        let auth = null;
+        let isCloudSync = false;
+        let products = [];
+        let sales = [];
+        let cart = [];
+        let selectedCategory = 'All';
+
+        /* Firestore Path Helpers */
+        const getProductsCol = () => collection(db, 'artifacts', appId, 'public', 'data', 'products');
+        const getProductDoc = (id) => doc(db, 'artifacts', appId, 'public', 'data', 'products', id);
+        const getSalesCol = () => collection(db, 'artifacts', appId, 'public', 'data', 'sales');
+        const getSaleDoc = (id) => doc(db, 'artifacts', appId, 'public', 'data', 'sales', id);
+
+        /* Default Initial Sample Data */
+        const initialProducts = [
+            { id: '1', name: 'Lucky Me Instant Canton', price: 15.00, stock: 45, category: 'Food' },
+            { id: '2', name: 'Coca-Cola 1.5L', price: 75.00, stock: 12, category: 'Beverages' },
+            { id: '3', name: 'Magic Sarap Seasoning 8g', price: 6.00, stock: 100, category: 'Condiments' },
+            { id: '4', name: 'Bear Brand Powdered Milk 33g', price: 18.00, stock: 30, category: 'Beverages' },
+            { id: '5', name: 'Piattos Potato Chips 85g', price: 38.00, stock: 8, category: 'Snacks' }
+        ];
+
+        /* Core App Initialization */
+        window.addEventListener('DOMContentLoaded', async () => {
+            loadFromLocalStorageFallback();
+            await initFirebase();
+            renderPOSProducts();
+            renderInventoryTable();
+            renderSalesHistory();
+            updateAnalytics();
+        });
+
+        async function initFirebase() {
+            const statusBadge = document.getElementById('status-badge');
+            const statusText = document.getElementById('status-text');
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                /* Authentication setup */
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                isCloudSync = true;
+                statusBadge.className = "px-3 py-1 rounded-full text-xs font-medium bg-emerald-600 text-white flex items-center gap-1.5 shadow-sm";
+                statusText.innerText = "Cloud Sync Active";
+
+                /* Realtime Firestore Sync using correct pathing */
+                onSnapshot(getProductsCol(), (snapshot) => {
+                    if (!snapshot.empty) {
+                        products = [];
+                        snapshot.forEach(docSnap => products.push(docSnap.data()));
+                        saveToLocalCache('products', products);
+                        renderPOSProducts();
+                        renderInventoryTable();
+                    } else if (products.length === 0) {
+                        /* Seed default products if empty cloud */
+                        initialProducts.forEach(p => saveProductToDB(p));
+                    }
+                }, (error) => {
+                    console.warn("Firestore products sync error:", error);
+                });
+
+                onSnapshot(getSalesCol(), (snapshot) => {
+                    sales = [];
+                    snapshot.forEach(docSnap => sales.push(docSnap.data()));
+                    sales.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    saveToLocalCache('sales', sales);
+                    renderSalesHistory();
+                    updateAnalytics();
+                }, (error) => {
+                    console.warn("Firestore sales sync error:", error);
+                });
+
+            } catch (err) {
+                console.warn("Firebase initialization failed, switching to local mode:", err);
+                isCloudSync = false;
+                statusBadge.className = "px-3 py-1 rounded-full text-xs font-medium bg-slate-600 text-white flex items-center gap-1.5 shadow-sm";
+                statusText.innerText = "Offline / Local Memory";
+            }
+        }
+
+        /* LocalStorage Helpers */
+        function loadFromLocalStorageFallback() {
+            const cachedProd = localStorage.getItem('minapos_products');
+            const cachedSales = localStorage.getItem('minapos_sales');
+
+            products = cachedProd ? JSON.parse(cachedProd) : initialProducts;
+            sales = cachedSales ? JSON.parse(cachedSales) : [];
+
+            if (!cachedProd) saveToLocalCache('products', products);
+        }
+
+        function saveToLocalCache(key, data) {
+            localStorage.setItem(`minapos_${key}`, JSON.stringify(data));
+        }
+
+        /* Database Save Router */
+        async function saveProductToDB(product) {
+            /* Local array update */
+            const index = products.findIndex(p => p.id === product.id);
+            if (index >= 0) products[index] = product;
+            else products.push(product);
+
+            saveToLocalCache('products', products);
+            renderPOSProducts();
+            renderInventoryTable();
+
+            /* Cloud sync if active */
+            if (isCloudSync && db && auth?.currentUser) {
+                try {
+                    await setDoc(getProductDoc(product.id), product);
+                } catch (e) { console.error("Cloud save failed", e); }
+            }
+        }
+
+        async function deleteProductFromDB(id) {
+            products = products.filter(p => p.id !== id);
+            saveToLocalCache('products', products);
+            renderPOSProducts();
+            renderInventoryTable();
+
+            if (isCloudSync && db && auth?.currentUser) {
+                try {
+                    await deleteDoc(getProductDoc(id));
+                } catch (e) { console.error("Cloud delete failed", e); }
+            }
+        }
+
+        async function saveSaleToDB(saleData) {
+            sales.unshift(saleData);
+            saveToLocalCache('sales', sales);
+            renderSalesHistory();
+            updateAnalytics();
+
+            if (isCloudSync && db && auth?.currentUser) {
+                try {
+                    await setDoc(getSaleDoc(saleData.id), saleData);
+                } catch (e) { console.error("Cloud sale save failed", e); }
+            }
+        }
+
+        /* Tab Navigation */
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn px-3 py-1.5 rounded-md transition-colors hover:bg-indigo-700 text-white";
+            });
+
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabName}`);
+            activeBtn.className = "tab-btn px-3 py-1.5 rounded-md transition-colors bg-white text-indigo-800 font-semibold shadow-sm";
+        };
+
+        /* POS Product Grid & Category Filters */
+        window.renderPOSProducts = function() {
+            const grid = document.getElementById('pos-product-grid');
+            const catContainer = document.getElementById('pos-categories');
+            const searchQuery = document.getElementById('pos-search').value.toLowerCase();
+
+            /* Categories */
+            const categories = ['All', ...new Set(products.map(p => p.category || 'General'))];
+            catContainer.innerHTML = categories.map(cat => `
+                <button onclick="setCategory('${cat}')" class="px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium transition ${selectedCategory === cat ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
+                    ${cat}
+                </button>
+            `).join('');
+
+            /* Filter items */
+            const filtered = products.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(searchQuery);
+                const matchesCat = selectedCategory === 'All' || (p.category || 'General') === selectedCategory;
+                return matchesSearch && matchesCat;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 text-sm">No products found</div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => `
+                <div onclick="addToCart('${p.id}')" class="bg-white p-3 rounded-xl border border-slate-200 hover:border-indigo-500 hover:shadow-md cursor-pointer transition flex flex-col justify-between group">
+                    <div>
+                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">${p.category || 'General'}</span>
+                        <h4 class="font-bold text-slate-800 text-sm group-hover:text-indigo-600 line-clamp-2">${p.name}</h4>
+                    </div>
+                    <div class="mt-3 flex justify-between items-end">
+                        <span class="font-extrabold text-indigo-600 text-base">₱${parseFloat(p.price).toFixed(2)}</span>
+                        <span class="text-[11px] px-1.5 py-0.5 rounded font-medium ${p.stock > 5 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}">
+                            Stock: ${p.stock}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.setCategory = function(cat) {
+            selectedCategory = cat;
+            renderPOSProducts();
+        };
+
+        /* Cart Logic */
+        window.addToCart = function(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            if (product.stock <= 0) {
+                alert(`Out of stock: ${product.name}!`);
+                return;
+            }
+
+            const cartItem = cart.find(item => item.id === productId);
+            if (cartItem) {
+                if (cartItem.qty < product.stock) {
+                    cartItem.qty++;
+                } else {
+                    alert(`Reached maximum available stock (${product.stock}) for this item.`);
+                }
+            } else {
+                cart.push({ id: product.id, name: product.name, price: product.price, qty: 1, maxStock: product.stock });
+            }
+
+            renderCart();
+        };
+
+        window.updateCartQty = function(productId, delta) {
+            const cartItem = cart.find(item => item.id === productId);
+            if (!cartItem) return;
+
+            cartItem.qty += delta;
+            if (cartItem.qty <= 0) {
+                cart = cart.filter(item => item.id !== productId);
+            } else if (cartItem.qty > cartItem.maxStock) {
+                cartItem.qty = cartItem.maxStock;
+                alert(`Only ${cartItem.maxStock} items available in stock.`);
+            }
+
+            renderCart();
+        };
+
+        window.clearCart = function() {
+            cart = [];
+            renderCart();
+        };
+
+        function renderCart() {
+            const cartContainer = document.getElementById('cart-items');
+
+            if (cart.length === 0) {
+                cartContainer.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-400 text-xs py-10">
+                    <i class="fa-solid fa-basket-shopping text-3xl mb-2 text-slate-300"></i>
+                    Your cart is empty
+                </div>`;
+            } else {
+                cartContainer.innerHTML = cart.map(item => `
+                    <div class="flex items-center justify-between text-xs py-1.5">
+                        <div class="flex-grow pr-2">
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-slate-400">₱${parseFloat(item.price).toFixed(2)} x ${item.qty}</p>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="updateCartQty('${item.id}', -1)" class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700">-</button>
+                            <span class="w-6 text-center font-bold text-slate-800">${item.qty}</span>
+                            <button onclick="updateCartQty('${item.id}', 1)" class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700">+</button>
+                            <span class="w-14 text-right font-bold text-indigo-600">₱${(item.price * item.qty).toFixed(2)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            updateCartTotals();
+        }
+
+        window.updateCartTotals = function() {
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const discountInput = parseFloat(document.getElementById('cart-discount').value) || 0;
+            const total = Math.max(0, subtotal - discountInput);
+            const paymentInput = parseFloat(document.getElementById('payment-amount').value) || 0;
+            const change = Math.max(0, paymentInput - total);
+
+            document.getElementById('cart-subtotal').innerText = `₱${subtotal.toFixed(2)}`;
+            document.getElementById('cart-total').innerText = `₱${total.toFixed(2)}`;
+            document.getElementById('cart-change').innerText = `₱${change.toFixed(2)}`;
+
+            const checkoutBtn = document.getElementById('btn-checkout');
+            checkoutBtn.disabled = cart.length === 0 || paymentInput < total;
+        };
+
+        /* Checkout Process */
+        window.processCheckout = async function() {
+            if (cart.length === 0) return;
+
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
+            const total = Math.max(0, subtotal - discount);
+            const payment = parseFloat(document.getElementById('payment-amount').value) || 0;
+
+            if (payment < total) {
+                alert("Insufficient payment amount!");
+                return;
+            }
+
+            const change = payment - total;
+            const saleId = 'REC-' + Date.now().toString().slice(-6);
+            const saleDate = new Date().toLocaleString('en-PH');
+
+            const saleData = {
+                id: saleId,
+                date: saleDate,
+                items: [...cart],
+                subtotal,
+                discount,
+                total,
+                payment,
+                change
+            };
+
+            /* Deduct Stocks */
+            for (const item of cart) {
+                const prod = products.find(p => p.id === item.id);
+                if (prod) {
+                    prod.stock = Math.max(0, prod.stock - item.qty);
+                    await saveProductToDB(prod);
+                }
+            }
+
+            /* Save Sales Transaction */
+            await saveSaleToDB(saleData);
+
+            /* Show Receipt Modal */
+            showReceipt(saleData);
+
+            /* Reset Cart Form */
+            cart = [];
+            document.getElementById('cart-discount').value = '0';
+            document.getElementById('payment-amount').value = '';
+            renderCart();
+        };
+
+        /* Receipt View */
+        function showReceipt(sale) {
+            document.getElementById('receipt-id').innerText = sale.id;
+            document.getElementById('receipt-date').innerText = sale.date;
+            
+            const itemsContainer = document.getElementById('receipt-items-list');
+            itemsContainer.innerHTML = sale.items.map(item => `
+                <div class="flex justify-between">
+                    <span>${item.name} x${item.qty}</span>
+                    <span>₱${(item.price * item.qty).toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('receipt-subtotal').innerText = `₱${sale.subtotal.toFixed(2)}`;
+            document.getElementById('receipt-discount').innerText = `-₱${sale.discount.toFixed(2)}`;
+            document.getElementById('receipt-total').innerText = `₱${sale.total.toFixed(2)}`;
+            document.getElementById('receipt-payment').innerText = `₱${sale.payment.toFixed(2)}`;
+            document.getElementById('receipt-change').innerText = `₱${sale.change.toFixed(2)}`;
+
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+
+        window.closeReceiptModal = function() {
+            document.getElementById('receipt-modal').classList.add('hidden');
+        };
+
+        /* Inventory Table & Product Modal */
+        window.renderInventoryTable = function() {
+            const tbody = document.getElementById('inventory-table-body');
+            const query = document.getElementById('inventory-search').value.toLowerCase();
+
+            const filtered = products.filter(p => p.name.toLowerCase().includes(query) || (p.category || '').toLowerCase().includes(query));
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">No products to display</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(p => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3 font-semibold text-slate-800">${p.name}</td>
+                    <td class="p-3 text-slate-500">${p.category || 'General'}</td>
+                    <td class="p-3 text-right font-bold text-slate-700">₱${parseFloat(p.price).toFixed(2)}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2 py-1 text-xs rounded-full font-bold ${p.stock > 10 ? 'bg-emerald-100 text-emerald-700' : p.stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}">
+                            ${p.stock} pcs ${p.stock <= 5 ? '(Low)' : ''}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center space-x-2">
+                        <button onclick="editProduct('${p.id}')" class="text-indigo-600 hover:text-indigo-800 font-medium"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+                        <button onclick="confirmDeleteProduct('${p.id}')" class="text-red-600 hover:text-red-800 font-medium"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+        window.openProductModal = function() {
+            document.getElementById('product-form').reset();
+            document.getElementById('prod-id').value = '';
+            document.getElementById('modal-product-title').innerText = 'Add Product';
+            document.getElementById('product-modal').classList.remove('hidden');
+        };
+
+        window.closeProductModal = function() {
+            document.getElementById('product-modal').classList.add('hidden');
+        };
+
+        window.editProduct = function(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+
+            document.getElementById('prod-id').value = product.id;
+            document.getElementById('prod-name').value = product.name;
+            document.getElementById('prod-price').value = product.price;
+            document.getElementById('prod-stock').value = product.stock;
+            document.getElementById('prod-category').value = product.category || '';
+
+            document.getElementById('modal-product-title').innerText = 'Edit Product';
+            document.getElementById('product-modal').classList.remove('hidden');
+        };
+
+        window.saveProduct = async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('prod-id').value || 'PROD-' + Date.now();
+            const product = {
+                id,
+                name: document.getElementById('prod-name').value.trim(),
+                price: parseFloat(document.getElementById('prod-price').value) || 0,
+                stock: parseInt(document.getElementById('prod-stock').value) || 0,
+                category: document.getElementById('prod-category').value.trim() || 'General'
+            };
+
+            await saveProductToDB(product);
+            closeProductModal();
+        };
+
+        window.confirmDeleteProduct = async function(id) {
+            if (confirm("Are you sure you want to delete this product?")) {
+                await deleteProductFromDB(id);
+            }
+        };
+
+        /* Sales History & Export CSV */
+        function renderSalesHistory() {
+            const tbody = document.getElementById('sales-table-body');
+            if (sales.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">No sales recorded yet</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = sales.map(s => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3 font-mono text-indigo-600 font-bold">${s.id}</td>
+                    <td class="p-3 text-slate-600">${s.date}</td>
+                    <td class="p-3 text-slate-600">${s.items ? s.items.reduce((sum, i) => sum + i.qty, 0) : 0} items</td>
+                    <td class="p-3 text-right font-bold text-slate-800">₱${parseFloat(s.total).toFixed(2)}</td>
+                    <td class="p-3 text-center">
+                        <button onclick='viewSaleReceipt(${JSON.stringify(s)})' class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded">View Receipt</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.viewSaleReceipt = function(sale) {
+            showReceipt(sale);
+        };
+
+        function updateAnalytics() {
+            const totalSalesSum = sales.reduce((sum, s) => sum + s.total, 0);
+            document.getElementById('stat-total-sales').innerText = `₱${totalSalesSum.toFixed(2)}`;
+            document.getElementById('stat-total-orders').innerText = sales.length;
+
+            /* Calculate top selling item */
+            const itemCounts = {};
+            sales.forEach(s => {
+                if (s.items) {
+                    s.items.forEach(i => {
+                        itemCounts[i.name] = (itemCounts[i.name] || 0) + i.qty;
+                    });
+                }
+            });
+
+            let topItem = '-';
+            let maxQty = 0;
+            for (const [name, qty] of Object.entries(itemCounts)) {
+                if (qty > maxQty) {
+                    maxQty = qty;
+                    topItem = `${name} (${qty} pcs)`;
+                }
+            }
+
+            document.getElementById('stat-top-item').innerText = topItem;
+        }
+
+        window.exportSalesCSV = function() {
+            if (sales.length === 0) {
+                alert("No sales data available to export.");
+                return;
+            }
+
+            let csv = "Receipt ID,Date,Total,Discount,Payment,Change\n";
+            sales.forEach(s => {
+                csv += `"${s.id}","${s.date}",${s.total},${s.discount},${s.payment},${s.change}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Sales_Report_${new Date().toISOString().slice(0,10)}.csv`);
+            a.click();
+        };
+
+        /* Settings Modal & Backup Tools */
+        window.toggleSettingsModal = function() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('hidden');
+        };
+
+        window.exportBackupData = function() {
+            const backup = {
+                products,
+                sales,
+                timestamp: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `MinaPOS_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            a.click();
+        };
+
+        window.importBackupData = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.products) {
+                        for (const p of imported.products) {
+                            await saveProductToDB(p);
+                        }
+                    }
+                    if (imported.sales) {
+                        for (const s of imported.sales) {
+                            await saveSaleToDB(s);
+                        }
+                    }
+                    alert("Products and sales data successfully restored!");
+                    toggleSettingsModal();
+                } catch (err) {
+                    alert("Error importing file. Please make sure it is a valid JSON backup file.");
+                }
+            };
+            reader.readAsText(file);
+        };
+    </script>
+</body>
+</html>
