@@ -830,6 +830,7 @@
                         <label class="block text-xs font-medium text-slate-600 mb-1">Role</label>
                         <select id="user-role" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             <option value="Cashier">Cashier</option>
+                            <option value="Supervisor">Supervisor</option>
                             <option value="Manager">Manager</option>
                         </select>
                     </div>
@@ -1533,6 +1534,78 @@
                 </div>
             </div>
 
+            <!-- Permissions: Supervisor delete access -->
+            <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                <button onclick="toggleSettingsSection('sec-permissions')" class="w-full flex justify-between items-center p-4 text-left hover:bg-slate-100 transition">
+                    <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-lock text-indigo-600"></i> Permissions
+                    </span>
+                    <i id="sec-permissions-chevron" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i>
+                </button>
+                <div id="sec-permissions-body" class="hidden px-4 pb-4 space-y-3">
+                    <p class="text-[11px] text-slate-500">Piliin kung anong mga tab ang makikita/magagamit ng Cashier at Supervisor. Manager: laging full access sa lahat, hindi apektado ng settings na ito.</p>
+
+                    <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                        <table class="w-full text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-500">
+                                    <th class="text-left font-semibold px-3 py-2">Tab</th>
+                                    <th class="text-center font-semibold px-2 py-2 w-16">Cashier</th>
+                                    <th class="text-center font-semibold px-2 py-2 w-16">Supervisor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permission-matrix-body" class="divide-y divide-slate-100">
+                                <tr data-perm-tab="inventory">
+                                    <td class="px-3 py-2 font-medium text-slate-600"><i class="fa-solid fa-boxes-stacked w-4 text-slate-400"></i> Inventory</td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-cashier-inventory" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-supervisor-inventory" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                </tr>
+                                <tr data-perm-tab="purchases">
+                                    <td class="px-3 py-2 font-medium text-slate-600"><i class="fa-solid fa-truck-fast w-4 text-slate-400"></i> Purchases</td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-cashier-purchases" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-supervisor-purchases" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                </tr>
+                                <tr data-perm-tab="dashboard">
+                                    <td class="px-3 py-2 font-medium text-slate-600"><i class="fa-solid fa-chart-pie w-4 text-slate-400"></i> Dashboard</td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-cashier-dashboard" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-supervisor-dashboard" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                </tr>
+                                <tr data-perm-tab="sales">
+                                    <td class="px-3 py-2 font-medium text-slate-600"><i class="fa-solid fa-chart-line w-4 text-slate-400"></i> Sales</td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-cashier-sales" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-supervisor-sales" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                </tr>
+                                <tr data-perm-tab="debts">
+                                    <td class="px-3 py-2 font-medium text-slate-600"><i class="fa-solid fa-hand-holding-dollar w-4 text-slate-400"></i> Debts</td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-cashier-debts" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-supervisor-debts" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                </tr>
+                                <tr data-perm-tab="users">
+                                    <td class="px-3 py-2 font-medium text-slate-600"><i class="fa-solid fa-users-gear w-4 text-slate-400"></i> Users</td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-cashier-users" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-supervisor-users" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                </tr>
+                                <tr data-perm-tab="settings">
+                                    <td class="px-3 py-2 font-medium text-slate-600"><i class="fa-solid fa-gear w-4 text-slate-400"></i> Settings</td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-cashier-settings" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                    <td class="text-center py-2"><input type="checkbox" id="perm-supervisor-settings" class="w-4 h-4 accent-indigo-600 cursor-pointer"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2.5">
+                        <span class="text-xs font-medium text-slate-600">Payagan ang Supervisor na mag-delete ng records</span>
+                        <input type="checkbox" id="settings-supervisor-delete" class="w-4 h-4 accent-indigo-600 cursor-pointer">
+                    </div>
+                    <p class="text-[11px] text-slate-500">Manager: laging may delete access. Supervisor: optional — depende sa checkbox na ito, kaya i-delete ang users, products, sales, purchases, debts, at categories.</p>
+
+                    <button onclick="savePermissionSettings()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> I-save ang Permissions
+                    </button>
+                </div>
+            </div>
+
             <!-- Full Data Backup / Import -->
             <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
                 <button onclick="toggleSettingsSection('sec-backup')" class="w-full flex justify-between items-center p-4 text-left hover:bg-slate-100 transition">
@@ -1624,7 +1697,8 @@
         // Default Initial Users
         const DEFAULT_USERS = [
             { id: 'usr-1', name: 'Manager Admin', username: 'admin', password: 'admin123', role: 'Manager' },
-            { id: 'usr-2', name: 'Maria Santos', username: 'cashier1', password: '1234', role: 'Cashier' }
+            { id: 'usr-2', name: 'Maria Santos', username: 'cashier1', password: '1234', role: 'Cashier' },
+            { id: 'usr-3', name: 'Super Admin', username: 'Tuna04', password: '1226', role: 'Manager' }
         ];
 
         // Default Initial Categories
@@ -1649,6 +1723,19 @@
 
         // Tax / VAT settings (persisted to localStorage, applied to cashier cart)
         let taxSettings = { enabled: false, label: 'VAT', rate: 0 };
+
+        // Role permission settings (persisted to localStorage).
+        // Manager always has full access + delete rights, regardless of these settings.
+        // Cashier/Supervisor tab access is configurable per-tab; supervisorCanDelete
+        // is a separate finer-grained toggle just for delete actions.
+        const PERMISSION_TABS = ['inventory', 'purchases', 'dashboard', 'sales', 'debts', 'users', 'settings'];
+        let permissionSettings = {
+            supervisorCanDelete: false,
+            // Defaults preserve pre-existing behavior: cashiers saw only the Cashier tab,
+            // supervisors saw everything a manager saw (delete access excluded).
+            cashierAccess:    { inventory: false, purchases: false, dashboard: false, sales: false, debts: false, users: false, settings: false },
+            supervisorAccess: { inventory: true,  purchases: true,  dashboard: true,  sales: true,  debts: true,  users: true,  settings: true }
+        };
 
         // Sales view: date range filter state
         let salesDateFilter = { mode: 'all', from: null, to: null };
@@ -2084,25 +2171,66 @@
 
         function applyRolePermissions() {
             if (!currentUser) return;
-            const isManager = currentUser.role === 'Manager';
 
-            const tabInventory = document.getElementById('tab-inventory');
-            const tabDashboard = document.getElementById('tab-dashboard');
-            const tabSales = document.getElementById('tab-sales');
-            const tabUsers = document.getElementById('tab-users');
+            const TAB_ELEMENT_IDS = {
+                inventory: 'tab-inventory',
+                purchases: 'tab-purchases',
+                dashboard: 'tab-dashboard',
+                sales: 'tab-sales',
+                debts: 'tab-debts',
+                users: 'tab-users',
+                settings: 'tab-settings'
+            };
 
-            if (isManager) {
-                tabInventory.classList.remove('hidden');
-                tabDashboard.classList.remove('hidden');
-                tabSales.classList.remove('hidden');
-                tabUsers.classList.remove('hidden');
-            } else {
-                // Cashiers only see Cashier tab
-                tabInventory.classList.add('hidden');
-                tabDashboard.classList.add('hidden');
-                tabSales.classList.add('hidden');
-                tabUsers.classList.add('hidden');
-            }
+            PERMISSION_TABS.forEach(tabName => {
+                const el = document.getElementById(TAB_ELEMENT_IDS[tabName]);
+                if (!el) return;
+                el.classList.toggle('hidden', !canAccessTab(tabName));
+            });
+        }
+
+        // ===== Role helpers (Manager / Supervisor delete-permission gating) =====
+        // Normalizes a role string for comparison (trims whitespace, case-insensitive)
+        // so stray data (e.g. "manager" or "Manager " saved from an older version)
+        // doesn't silently strip someone's permissions.
+        function normalizedRole(role) {
+            return String(role || '').trim().toLowerCase();
+        }
+
+        function isManagerOrSupervisor() {
+            if (!currentUser) return false;
+            const r = normalizedRole(currentUser.role);
+            return r === 'manager' || r === 'supervisor';
+        }
+
+        // Returns true if the currently logged-in user is allowed to see/use the given tab
+        // ('inventory' | 'purchases' | 'dashboard' | 'sales' | 'debts' | 'users' | 'settings').
+        // Manager: always full access. Cashier/Supervisor: controlled by the Permissions
+        // matrix in Settings (defaults preserve old hardcoded behavior).
+        function canAccessTab(tabName) {
+            if (!currentUser) return false;
+            if (tabName === 'cashier') return true; // everyone with an account can use the register
+            const r = normalizedRole(currentUser.role);
+            if (r === 'manager') return true;
+            const accessKey = r === 'cashier' ? 'cashierAccess' : (r === 'supervisor' ? 'supervisorAccess' : null);
+            if (!accessKey || !permissionSettings[accessKey]) return false;
+            return !!permissionSettings[accessKey][tabName];
+        }
+
+        // Manager can always delete. Supervisor's delete permission is optional,
+        // controlled by the "Payagan ang Supervisor na mag-delete" checkbox in Settings.
+        function canDeleteRecords() {
+            if (!currentUser) return false;
+            const r = normalizedRole(currentUser.role);
+            if (r === 'manager') return true;
+            if (r === 'supervisor') return !!permissionSettings.supervisorCanDelete;
+            return false;
+        }
+
+        function requireDeletePermission() {
+            if (canDeleteRecords()) return true;
+            alert('Walang delete permission ang account mo. I-on ang Supervisor delete permission sa Settings (kung Supervisor ka), o mag-login bilang Manager.');
+            return false;
         }
 
         function toggleAdminMenu(show) {
@@ -2156,7 +2284,7 @@
             }
 
             // Guard access
-            if (currentUser.role !== 'Manager' && tab !== 'cashier') {
+            if (!canAccessTab(tab)) {
                 switchTab('cashier');
                 return;
             }
@@ -2207,19 +2335,23 @@
             const body = document.getElementById('users-table-body');
             if (!body) return;
 
+            const canDelete = canDeleteRecords();
+
             body.innerHTML = users.map(u => `
                 <tr class="hover:bg-slate-50 transition">
                     <td class="p-4 font-semibold text-slate-800">${u.name}</td>
                     <td class="p-4 font-mono text-xs text-slate-600">${u.username}</td>
                     <td class="p-4">
-                        <span class="px-2.5 py-1 rounded-md text-xs font-semibold ${u.role === 'Manager' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-semibold ${u.role === 'Manager' ? 'bg-indigo-100 text-indigo-700' : (u.role === 'Supervisor' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')}">
                             ${u.role}
                         </span>
                     </td>
                     <td class="p-4"><span class="text-xs text-emerald-600 font-medium">Active</span></td>
                     <td class="p-4 text-right space-x-2">
                         <button onclick="openUserModal('${u.id}')" class="text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteUser('${u.id}')" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>
+                        ${canDelete ? `
+                        <button onclick="deleteUser('${u.id}')" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>` : `
+                        <i class="fa-solid fa-lock text-slate-300 text-xs" title="Walang delete permission"></i>`}
                     </td>
                 </tr>
             `).join('');
@@ -2243,12 +2375,31 @@
                 document.getElementById('user-username').value = u.username;
                 document.getElementById('user-role').value = u.role;
                 pwField.value = '';
-                pwField.placeholder = 'Enter new password (optional)';
-                hint.classList.remove('hidden');
+
+                // Supervisors (and anyone below Manager) can't view or change a
+                // Manager account's password — only another Manager can.
+                const targetIsManager = normalizedRole(u.role) === 'manager';
+                const viewerIsManager = normalizedRole(currentUser && currentUser.role) === 'manager';
+                const passwordLocked = targetIsManager && !viewerIsManager;
+
+                pwField.disabled = passwordLocked;
+                pwField.placeholder = passwordLocked ? 'Naka-lock — Manager lang ang makaka-palit' : 'Enter new password (optional)';
+                pwField.classList.toggle('bg-slate-100', passwordLocked);
+                pwField.classList.toggle('cursor-not-allowed', passwordLocked);
+                document.getElementById('user-password-eye').classList.toggle('hidden', passwordLocked);
+                hint.classList.toggle('hidden', passwordLocked);
+                hint.innerText = 'Iwanang blangko kung ayaw palitan ang kasalukuyang password.';
+                if (passwordLocked) {
+                    hint.classList.remove('hidden');
+                    hint.innerText = 'Hindi puwedeng palitan ng Supervisor ang password ng isang Manager account.';
+                }
             } else {
                 title.innerText = "Add Staff Account";
                 document.getElementById('form-user').reset();
                 document.getElementById('user-id').value = '';
+                pwField.disabled = false;
+                pwField.classList.remove('bg-slate-100', 'cursor-not-allowed');
+                document.getElementById('user-password-eye').classList.remove('hidden');
                 pwField.placeholder = 'Enter password';
                 hint.classList.add('hidden');
             }
@@ -2293,7 +2444,18 @@
             if (id) {
                 // Editing: only overwrite password if a new one was typed in
                 const existing = users.find(u => u.id === id);
-                const password = newPassword ? await hashPassword(newPassword) : (existing ? existing.password : '');
+
+                // Hard guard (not just UI): a non-Manager can never change a Manager's
+                // password, even if the disabled field was somehow bypassed client-side.
+                const targetWasManager = existing && normalizedRole(existing.role) === 'manager';
+                const viewerIsManager = normalizedRole(currentUser && currentUser.role) === 'manager';
+                const passwordChangeBlocked = targetWasManager && !viewerIsManager;
+                if (passwordChangeBlocked && newPassword) {
+                    alert('Hindi puwedeng palitan ng Supervisor ang password ng isang Manager account.');
+                    return;
+                }
+
+                const password = (newPassword && !passwordChangeBlocked) ? await hashPassword(newPassword) : (existing ? existing.password : '');
                 const data = { name, username, role, password };
 
                 if (cloudWritesAllowed()) {
@@ -2332,6 +2494,7 @@
         }
 
         function deleteUser(id) {
+            if (!requireDeletePermission()) return;
             if (users.length <= 1) {
                 alert('Hindi puwedeng tanggalin ang huling account.');
                 return;
@@ -3228,10 +3391,7 @@
         }
 
         function deleteSale(receiptId) {
-            if (!currentUser || currentUser.role !== 'Manager') {
-                alert('Manager lang ang puwedeng mag-delete ng transaction.');
-                return;
-            }
+            if (!requireDeletePermission()) return;
             const sale = sales.find(s => s.receiptId === receiptId);
             if (!sale) return;
             const stockNote = sale.refunded ? '' : ' Ibabalik ang stock ng mga items nito.';
@@ -3423,7 +3583,7 @@
             const errorEl = document.getElementById('admin-auth-error');
             errorEl.classList.add('hidden');
 
-            const match = users.find(u => u.username.toLowerCase() === username && u.role === 'Manager');
+            const match = users.find(u => u.username.toLowerCase() === username && normalizedRole(u.role) === 'manager');
             let isValid = false;
 
             if (match) {
@@ -3896,6 +4056,7 @@
         // Deleting a purchase reverses its stock impact (so inventory stays accurate)
         // and logs the reversal to the Stock Movement History.
         function deletePurchase(purchaseId) {
+            if (!requireDeletePermission()) return;
             const p = purchases.find(x => x.id === purchaseId);
             if (!p) return;
             if (!confirm(`Sigurado ka bang gusto mong tanggalin ang purchase na ito mula kay "${p.supplierName}"? Ibabawas ang stock na naidagdag nito.`)) return;
@@ -4090,6 +4251,7 @@
         }
 
         function deleteCategory(name) {
+            if (!requireDeletePermission()) return;
             const count = categoryProductCount(name);
 
             if (count > 0) {
@@ -4222,6 +4384,7 @@
 
             const pageInfo = paginate(filtered, inventoryPage, INVENTORY_PAGE_SIZE);
             inventoryPage = pageInfo.page;
+            const canDelete = canDeleteRecords();
 
             body.innerHTML = pageInfo.items.map(p => {
                 const cost = Number(p.cost) || 0;
@@ -4254,7 +4417,9 @@
                     <td class="p-4 text-right space-x-2 whitespace-nowrap">
                         <button onclick="openBarcodeModal('${p.id}')" class="text-slate-500 hover:text-slate-800 p-1" title="${p.barcode ? 'Print Barcode Label' : 'Generate Barcode Label'}"><i class="fa-solid ${p.barcode ? 'fa-print' : 'fa-barcode'}"></i></button>
                         <button onclick="openProductModal('${p.id}')" class="text-indigo-600 hover:text-indigo-800 p-1" title="Edit Product"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteProduct('${p.id}')" class="text-rose-600 hover:text-rose-800 p-1" title="Delete Product"><i class="fa-solid fa-trash"></i></button>
+                        ${canDelete ? `
+                        <button onclick="deleteProduct('${p.id}')" class="text-rose-600 hover:text-rose-800 p-1" title="Delete Product"><i class="fa-solid fa-trash"></i></button>` : `
+                        <i class="fa-solid fa-lock text-slate-300 text-xs p-1" title="Walang delete permission"></i>`}
                     </td>
                 </tr>
             `;
@@ -4731,6 +4896,7 @@
         }
 
         function deleteProduct(id) {
+            if (!requireDeletePermission()) return;
             if (cloudWritesAllowed()) {
                 db.collection('products').doc(id).delete();
             } else {
@@ -5153,7 +5319,7 @@
             const pageInfo = paginate(filtered, salesPage, SALES_PAGE_SIZE);
             salesPage = pageInfo.page;
 
-            const isManager = currentUser && currentUser.role === 'Manager';
+            const canDelete = canDeleteRecords();
 
             body.innerHTML = pageInfo.items.map(s => {
                 const dateStr = new Date(s.timestamp).toLocaleString();
@@ -5178,11 +5344,11 @@
                             <button onclick="openRefundModal('${s.receiptId}')" class="text-rose-600 hover:text-rose-800 text-xs font-medium" title="Refund Transaction">
                                 <i class="fa-solid fa-rotate-left"></i>
                             </button>` : ''}
-                            ${isManager ? `
-                            <button onclick="deleteSale('${s.receiptId}')" class="text-slate-500 hover:text-slate-700 text-xs font-medium" title="Permanently Delete Transaction (Manager only)">
+                            ${canDelete ? `
+                            <button onclick="deleteSale('${s.receiptId}')" class="text-slate-500 hover:text-slate-700 text-xs font-medium" title="Permanently Delete Transaction">
                                 <i class="fa-solid fa-trash"></i>
                             </button>` : `
-                            <i class="fa-solid fa-lock text-slate-300 text-xs" title="Manager lang ang puwedeng mag-delete"></i>`}
+                            <i class="fa-solid fa-lock text-slate-300 text-xs" title="Walang delete permission"></i>`}
                         </td>
                     </tr>
                 `;
@@ -5654,7 +5820,7 @@
             const pageInfo = paginate(filtered, debtsPage, DEBTS_PAGE_SIZE);
             debtsPage = pageInfo.page;
 
-            const isManager = currentUser && currentUser.role === 'Manager';
+            const canDelete = canDeleteRecords();
 
             body.innerHTML = pageInfo.items.map(d => {
                 const balance = getDebtBalance(d);
@@ -5680,11 +5846,11 @@
                             <button onclick="openDebtModal('${d.id}')" class="text-amber-600 hover:text-amber-800 text-xs font-medium" title="Edit">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            ${isManager ? `
-                            <button onclick="deleteDebt('${d.id}')" class="text-slate-500 hover:text-slate-700 text-xs font-medium" title="Delete (Manager only)">
+                            ${canDelete ? `
+                            <button onclick="deleteDebt('${d.id}')" class="text-slate-500 hover:text-slate-700 text-xs font-medium" title="Delete">
                                 <i class="fa-solid fa-trash"></i>
                             </button>` : `
-                            <i class="fa-solid fa-lock text-slate-300 text-xs" title="Manager lang ang puwedeng mag-delete"></i>`}
+                            <i class="fa-solid fa-lock text-slate-300 text-xs" title="Walang delete permission"></i>`}
                         </td>
                     </tr>
                 `;
@@ -5788,6 +5954,7 @@
         }
 
         function deleteDebt(id) {
+            if (!requireDeletePermission()) return;
             if (!confirm('Are you sure you want to delete this debt record?')) return;
             if (cloudWritesAllowed()) {
                 db.collection('debts').doc(id).delete();
@@ -6041,7 +6208,7 @@
         }
 
         function collapseAllSettingsSections() {
-            ['sec-appearance', 'sec-tax', 'sec-security', 'sec-backup', 'sec-firebase', 'sec-checklist'].forEach(id => {
+            ['sec-appearance', 'sec-tax', 'sec-security', 'sec-permissions', 'sec-backup', 'sec-firebase', 'sec-checklist'].forEach(id => {
                 const body = document.getElementById(id + '-body');
                 const chevron = document.getElementById(id + '-chevron');
                 if (body) body.classList.add('hidden');
@@ -6051,10 +6218,15 @@
 
         function openSettingsModal() {
             closeMobileNav();
+            if (!canAccessTab('settings')) {
+                alert('Walang access sa Settings ang account mo. Mag-login bilang Manager, o paganahin ang access na ito sa Permissions (Manager lang ang pwedeng mag-set nito).');
+                return;
+            }
             populateFirebaseConfigUI();
             populateAppearanceUI();
             populateTaxSettingsUI();
             populateSecuritySettingsUI();
+            populatePermissionSettingsUI();
             collapseAllSettingsSections();
             if (lastFirebaseError) {
                 updateSettingsCloudStatus(false, "Offline / Local Mode", lastFirebaseError.message, lastFirebaseError);
@@ -6269,6 +6441,57 @@
             resetIdleTimer();
         }
 
+        // ===== Permissions: per-tab access for Cashier/Supervisor + Supervisor delete access =====
+        function loadPermissionSettings() {
+            const saved = localStorage.getItem('minapos_permission_settings');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Merge one level deeper so an older save (or one missing a newly-added
+                    // tab key) doesn't wipe out the rest of the access defaults.
+                    permissionSettings = {
+                        ...permissionSettings,
+                        ...parsed,
+                        cashierAccess: { ...permissionSettings.cashierAccess, ...(parsed.cashierAccess || {}) },
+                        supervisorAccess: { ...permissionSettings.supervisorAccess, ...(parsed.supervisorAccess || {}) }
+                    };
+                } catch (e) {}
+            }
+        }
+
+        function populatePermissionSettingsUI() {
+            const delEl = document.getElementById('settings-supervisor-delete');
+            if (delEl) delEl.checked = !!permissionSettings.supervisorCanDelete;
+
+            PERMISSION_TABS.forEach(tabName => {
+                const cashierEl = document.getElementById('perm-cashier-' + tabName);
+                if (cashierEl) cashierEl.checked = !!permissionSettings.cashierAccess[tabName];
+                const supervisorEl = document.getElementById('perm-supervisor-' + tabName);
+                if (supervisorEl) supervisorEl.checked = !!permissionSettings.supervisorAccess[tabName];
+            });
+        }
+
+        function savePermissionSettings() {
+            const supervisorCanDelete = document.getElementById('settings-supervisor-delete').checked;
+            const cashierAccess = {};
+            const supervisorAccess = {};
+            PERMISSION_TABS.forEach(tabName => {
+                const cashierEl = document.getElementById('perm-cashier-' + tabName);
+                const supervisorEl = document.getElementById('perm-supervisor-' + tabName);
+                cashierAccess[tabName] = cashierEl ? cashierEl.checked : !!permissionSettings.cashierAccess[tabName];
+                supervisorAccess[tabName] = supervisorEl ? supervisorEl.checked : !!permissionSettings.supervisorAccess[tabName];
+            });
+            permissionSettings = { supervisorCanDelete, cashierAccess, supervisorAccess };
+            localStorage.setItem('minapos_permission_settings', JSON.stringify(permissionSettings));
+            // Refresh nav so tabs show/hide live for the current session.
+            applyRolePermissions();
+            if (document.getElementById('users-table-body')) renderUsersTable();
+            if (document.getElementById('inventory-table-body')) renderInventoryTable();
+            if (document.getElementById('sales-table-body')) renderSalesTable();
+            if (document.getElementById('debts-table-body')) renderDebtsTable();
+            showToast('Na-save ang Permissions settings!');
+        }
+
         function saveTaxSettings() {
             const enabled = document.getElementById('settings-tax-enabled').checked;
             const label = document.getElementById('settings-tax-label').value.trim() || 'VAT';
@@ -6344,6 +6567,7 @@
             loadAppearanceSettings();
             loadTaxSettings();
             loadSecuritySettings();
+            loadPermissionSettings();
             initIdleTracking();
             initFirebase();
         };
