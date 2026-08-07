@@ -1778,6 +1778,132 @@
             return isCloudActive && db && !isGuestMode;
         }
 
+        // ===== Online Presence (Users tab: 🟢 online / ⚪ offline + Last Seen) =====
+        // Works on top of the existing 'users' collection — no new collection needed.
+        // Heartbeat-based (not Realtime Database), so it stays compatible with the
+        // current Firebase/Firestore-only setup. A user is considered online while
+        // `online: true` AND their `lastSeen` is fresher than PRESENCE_STALE_MS —
+        // this gives an automatic "eventual offline" even if the tab crashes or the
+        // network drops before the logout write can fire.
+        const PRESENCE_HEARTBEAT_MS = 30000; // refresh lastSeen every 30s while logged in
+        const PRESENCE_STALE_MS = 75000;     // no heartbeat for 75s -> treat as offline
+        let presenceUserId = null;
+        let presenceHeartbeatId = null;
+
+        function writePresence(userId, online) {
+            if (!userId || userId === 'guest') return;
+            const nowIso = new Date().toISOString();
+            const browser = detectBrowserName();
+            const idx = users.findIndex(u => u.id === userId);
+            if (idx !== -1) {
+                users[idx] = { ...users[idx], online, lastSeen: nowIso, browser };
+            }
+            if (cloudWritesAllowed()) {
+                db.collection('users').doc(userId).update({
+                    online,
+                    lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+                    browser
+                }).catch(err => console.warn('Presence update error:', err));
+            } else {
+                saveLocalUsers();
+            }
+            renderUsersTable();
+        }
+
+        // Lightweight browser sniff (no external lib) — good enough to label "Last Seen".
+        function detectBrowserName() {
+            const ua = navigator.userAgent || '';
+            if (/Edg\//.test(ua)) return 'Edge';
+            if (/OPR\//.test(ua) || /Opera/.test(ua)) return 'Opera';
+            if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) return 'Chrome';
+            if (/Firefox\//.test(ua)) return 'Firefox';
+            if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return 'Safari';
+            return 'Unknown Browser';
+        }
+
+        function startPresence(userId) {
+            if (!userId || userId === 'guest') return;
+            if (presenceUserId === userId && presenceHeartbeatId) return; // already running for this user
+            stopPresenceHeartbeatOnly();
+            presenceUserId = userId;
+            writePresence(userId, true);
+            presenceHeartbeatId = setInterval(() => {
+                if (presenceUserId) writePresence(presenceUserId, true);
+            }, PRESENCE_HEARTBEAT_MS);
+        }
+
+        function stopPresenceHeartbeatOnly() {
+            if (presenceHeartbeatId) { clearInterval(presenceHeartbeatId); presenceHeartbeatId = null; }
+        }
+
+        function stopPresence() {
+            if (presenceUserId) writePresence(presenceUserId, false);
+            stopPresenceHeartbeatOnly();
+            presenceUserId = null;
+        }
+
+        // Best-effort: fires when the tab/window is actually closing. Firestore writes
+        // made this late aren't guaranteed to complete, which is exactly why the
+        // PRESENCE_STALE_MS fallback above exists — the Users tab will still flip to
+        // offline shortly after, even if this particular write is dropped.
+        function initPresenceLifecycleListeners() {
+            window.addEventListener('beforeunload', () => {
+                if (presenceUserId) writePresence(presenceUserId, false);
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && presenceUserId) {
+                    writePresence(presenceUserId, true); // resumed activity -> refresh immediately
+                }
+            });
+            // Keeps "Last Seen" text and any online->offline staleness flips ticking
+            // in the UI even without a fresh Firestore snapshot.
+            setInterval(() => {
+                const view = document.getElementById('view-users');
+                if (view && !view.classList.contains('hidden')) renderUsersTable();
+            }, 15000);
+        }
+
+        function isUserOnline(u) {
+            if (!u || !u.online) return false;
+            const date = presenceTimestampToDate(u.lastSeen);
+            if (!date) return true; // write just sent, timestamp not resolved yet
+            return (Date.now() - date.getTime()) < PRESENCE_STALE_MS;
+        }
+
+        function presenceTimestampToDate(ts) {
+            if (!ts) return null;
+            if (typeof ts.toDate === 'function') return ts.toDate(); // Firestore Timestamp
+            if (typeof ts === 'string') { const d = new Date(ts); return isNaN(d) ? null : d; }
+            if (ts instanceof Date) return ts;
+            return null;
+        }
+
+        function formatLastSeen(ts) {
+            const date = presenceTimestampToDate(ts);
+            if (!date) return 'Ngayon lang';
+            const diffMs = Date.now() - date.getTime();
+            if (diffMs < 15000) return 'Ngayon lang';
+            const sec = Math.floor(diffMs / 1000);
+            if (sec < 60) return `${sec}s ago`;
+            const min = Math.floor(sec / 60);
+            if (min < 60) return `${min}m ago`;
+            const hr = Math.floor(min / 60);
+            if (hr < 24) return `${hr}h ago`;
+            const day = Math.floor(hr / 24);
+            if (day < 7) return `${day}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        // Full, unambiguous date/time — shown alongside the relative "5m ago" text.
+        function formatFullTimestamp(ts) {
+            const date = presenceTimestampToDate(ts);
+            if (!date) return '';
+            return date.toLocaleString('en-PH', {
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: 'numeric', minute: '2-digit'
+            });
+        }
+
         // ---- Password Hashing (SHA-256 via Web Crypto API) ----
         async function hashPassword(plainText) {
             if (!window.crypto || !window.crypto.subtle) {
@@ -2038,6 +2164,19 @@
             if (savedSession) {
                 const found = users.find(u => u.username === savedSession);
                 if (found) {
+                    // Already logged in as this user — this branch fires often now,
+                    // since the presence heartbeat (writePresence) touches the users
+                    // collection every 30s and re-triggers this onSnapshot callback.
+                    // Just refresh the reference + role UI instead of replaying the
+                    // full login flow, so the user isn't yanked back to Cashier or
+                    // idle-reset every time a heartbeat lands.
+                    if (currentUser && currentUser.id === found.id) {
+                        currentUser = found;
+                        document.getElementById('current-user-name').innerText = found.name;
+                        document.getElementById('current-user-role').innerText = found.role;
+                        applyRolePermissions();
+                        return;
+                    }
                     loginUserSuccess(found);
                     return;
                 }
@@ -2110,6 +2249,7 @@
             showLoginModal(false);
             applyRolePermissions();
             switchTab('cashier');
+            startPresence(userObj.id); // 🟢 mark online, starts heartbeat
             renderUsersTable(); // Refresh user view
             resetIdleTimer();
             showLowStockPopupIfNeeded();
@@ -2151,6 +2291,7 @@
             if (!skipConfirm && !confirm('Sigurado ka bang gusto mong mag-logout?')) return;
 
             const wasGuest = isGuestMode;
+            if (!wasGuest) stopPresence(); // ⚪ mark offline immediately on logout
             currentUser = null;
             isGuestMode = false;
             sessionStorage.removeItem('minapos_active_user');
@@ -2346,7 +2487,23 @@
                             ${u.role}
                         </span>
                     </td>
-                    <td class="p-4"><span class="text-xs text-emerald-600 font-medium">Active</span></td>
+                    <td class="p-4">
+                        ${isUserOnline(u) ? `
+                        <div class="flex flex-col">
+                            <span class="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                            </span>
+                            ${u.browser ? `<span class="text-[10px] text-slate-400 mt-0.5"><i class="fa-solid fa-globe"></i> ${u.browser}</span>` : ''}
+                        </div>` : `
+                        <div class="flex flex-col">
+                            <span class="inline-flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                                <span class="w-2 h-2 rounded-full bg-slate-300"></span> Offline
+                            </span>
+                            ${u.lastSeen ? `
+                            <span class="text-[10px] text-slate-400 mt-0.5"><i class="fa-regular fa-clock"></i> ${formatLastSeen(u.lastSeen)} · ${formatFullTimestamp(u.lastSeen)}</span>
+                            ${u.browser ? `<span class="text-[10px] text-slate-400"><i class="fa-solid fa-globe"></i> ${u.browser}</span>` : ''}` : ''}
+                        </div>`}
+                    </td>
                     <td class="p-4 text-right space-x-2">
                         <button onclick="openUserModal('${u.id}')" class="text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-pen-to-square"></i></button>
                         ${canDelete ? `
@@ -6569,6 +6726,7 @@
             loadSecuritySettings();
             loadPermissionSettings();
             initIdleTracking();
+            initPresenceLifecycleListeners();
             initFirebase();
         };
     </script>
